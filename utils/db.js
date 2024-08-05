@@ -19,13 +19,8 @@ class DBClient {
         .catch((error) => console.error(error));
       }
 
-    async isAlive() {
-      try {
-        await this.client.db().command({ ping: 1 });
-        return true;
-      } catch (error) {
-        return false;
-      }
+    isAlive() {
+      return this.client.isConnected();
     }
 
     async nbUsers() {
