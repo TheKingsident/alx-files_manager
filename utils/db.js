@@ -4,42 +4,47 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 class DBClient {
-    constructor() {
-      const host = process.env.DB_HOST || 'localhost';
-      const port = process.env.DB_PORT || 27017;
-      const database = process.env.DB_DATABASE || 'files_manager';
+  constructor() {
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || 27017;
+    const database = process.env.DB_DATABASE || 'files_manager';
 
-      const uri = `mongodb://${host}:${port}/`;
-      this.client = new MongoClient(uri, { useNewUrlParser: true,
-        useUnifiedTopology: true });
-      this.client.connect()
-        .then(() => {
-          this.db = this.client.db(database);
-        }) 
-        .catch((error) => console.error(error));
-      }
+    const uri = `mongodb://${host}:${port}/`;
+    this.client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    this.connect();
+  }
 
-    isAlive() {
-      return this.client.isConnected();
+  async connect() {
+    try {
+      await this.client.connect();
+      this.db = this.client.db(process.env.DB_DATABASE || 'files_manager');
+      console.log('Connected to MongoDB');
+    } catch (error) {
+      console.error('Failed to connect to MongoDB', error);
     }
+  }
 
-    async nbUsers() {
-      try {
-        return this.db.collection('users').countDocuments();
-      } catch (error) {
-        console.error(error);
-        return false;
-      }
-    }
+  isAlive() {
+    return this.client.isConnected();
+  }
 
-    async nbFiles() {
-      try {
-        return this.db.collection('files').countDocuments();
-      } catch (error) {
-        console.error(error);
-        return false;
-      }
+  async nbUsers() {
+    try {
+      return await this.db.collection('users').countDocuments();
+    } catch (error) {
+      console.error('Error counting users:', error);
+      return false;
     }
+  }
+
+  async nbFiles() {
+    try {
+      return await this.db.collection('files').countDocuments();
+    } catch (error) {
+      console.error('Error counting files:', error);
+      return false;
+    }
+  }
 }
 
 const dbClient = new DBClient();
