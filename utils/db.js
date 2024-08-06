@@ -1,52 +1,48 @@
 import { MongoClient } from 'mongodb';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 class DBClient {
   constructor() {
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
-
-    const uri = `mongodb://${host}:${port}/`;
-    this.client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    this.connect();
+    this.host = process.env.DB_HOST || 'localhost';
+    this.port = process.env.DB_PORT || 27017;
+    this.dbName = process.env.DB_DATABASE || 'files_manager';
+    this.connected = false;
+    this.connectClient();
   }
 
-  async connect() {
-    try {
-      await this.client.connect();
-      this.db = this.client.db(process.env.DB_DATABASE || 'files_manager');
-      console.log('Connected to MongoDB');
-    } catch (error) {
-      console.error('Failed to connect to MongoDB', error);
-    }
+  async connectClient() {
+    MongoClient(`mongodb://${this.host}:${this.port}`, {
+      useUnifiedTopology: true,
+    })
+      .connect()
+      .then(async (client) => {
+        this.client = client;
+        this.connected = true;
+        this.db = this.client.db(this.dbName);
+        this.files = await this.db.collection('files');
+        this.users = await this.db.collection('users');
+      })
+      .catch(console.error);
   }
 
   isAlive() {
-    return this.client.isConnected();
+    return this.connected;
   }
 
   async nbUsers() {
-    try {
-      return await this.db.collection('users').countDocuments();
-    } catch (error) {
-      console.error('Error counting users:', error);
-      return false;
-    }
+    return this.users.countDocuments();
   }
 
   async nbFiles() {
-    try {
-      return await this.db.collection('files').countDocuments();
-    } catch (error) {
-      console.error('Error counting files:', error);
-      return false;
-    }
+    return this.files.countDocuments();
+  }
+
+  async uploadFile(data) {
+    await this.db.collection('files').insertOne(data);
+
+    const newFile = await this.db.collection('files').findOne(data);
+    return newFile;
   }
 }
 
 const dbClient = new DBClient();
-
 export default dbClient;
