@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const dbClient = require('./db');
-const redisClient = require('./redis');
+const dbClient = require('./utils/db');
+const redisClient = require('./utils/redis');
 const AppController = require('./controllers/AppController');
 const routes = require('./routes');
 
