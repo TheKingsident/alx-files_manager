@@ -5,6 +5,9 @@ import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 import { ObjectId } from 'mongodb';
 import mime from 'mime-types';
+import Bull from 'bull';
+
+const fileQueue = new Bull('fileQueue');
 
 class FilesController {
   // postUpload method
@@ -72,6 +75,10 @@ class FilesController {
         newFile.localPath = localPath;
         const result = await dbClient.files.insertOne(newFile);
 
+        if (type === 'image') {
+          await fileQueue.add({ userId, fileId: result.insertedId });
+        }
+
         return res.status(201).json({
           id: result.insertedId,
           ...newFile,
@@ -82,6 +89,7 @@ class FilesController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
   // unpublish method
   static async unpublish(req, res) {
     const token = req.headers['x-token'];
@@ -116,6 +124,7 @@ class FilesController {
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
+
   //getShow method
   static async getShow(req, res) {
     const token = req.headers['x-token'];
@@ -143,6 +152,7 @@ class FilesController {
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
+
   //getIndex method
   static async getIndex(req, res) {
     const token = req.headers['x-token'];
@@ -252,9 +262,11 @@ class FilesController {
   }
 
   // getFile method
+  // getFile method
   static async getFile(req, res) {
     const token = req.headers['x-token'];
     const fileId = req.params.id;
+    const size = req.query.size;
 
     try {
       const file = await dbClient.files.findOne({ _id: new ObjectId(fileId) });
@@ -278,12 +290,17 @@ class FilesController {
         return res.status(400).json({ error: "A folder doesn't have content" });
       }
 
-      if (!fs.existsSync(file.localPath)) {
+      let localPath = file.localPath;
+      if (size) {
+        localPath = `${file.localPath}_${size}`;
+      }
+
+      if (!fs.existsSync(localPath)) {
         return res.status(404).json({ error: 'Not found' });
       }
 
       const mimeType = mime.lookup(file.name) || 'application/octet-stream';
-      const fileContent = fs.readFileSync(file.localPath);
+      const fileContent = fs.readFileSync(localPath);
 
       res.setHeader('Content-Type', mimeType);
       return res.status(200).send(fileContent);
