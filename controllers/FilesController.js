@@ -107,7 +107,9 @@ class FilesController {
         { $set: { isPublic: false } }
       );
 
-      return res.status(200).json({ message: 'File unpublished successfully' });
+      const updatedFile = await dbClient.files.findOne({ _id: new ObjectId(fileId) });
+
+      return res.status(200).json(updatedFile);
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: 'Internal server error' });
