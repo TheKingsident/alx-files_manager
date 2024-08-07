@@ -143,27 +143,36 @@ class FilesController {
   //getIndex method
   static async getIndex(req, res) {
     const token = req.headers['x-token'];
-    const parentId = req.query.parentId || 0;
+    const parentId = parseInt(req.query.parentId, 10) || 0;
     const page = parseInt(req.query.page, 10) || 0;
     const pageSize = 20;
-
+  
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-
+  
     const userId = await redisClient.get(`auth_${token}`);
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-
+  
     try {
+      const query = {
+        userId: new ObjectId(userId),
+        parentId: parentId === 0 ? 0 : new ObjectId(parentId),
+      };
+  
+      console.log('Query:', query);
+  
       const files = await dbClient.files.aggregate([
-        { $match: { userId: new ObjectId(userId), parentId: new ObjectId(parentId) } },
+        { $match: query },
         { $sort: { _id: 1 } },
         { $skip: page * pageSize },
         { $limit: pageSize }
       ]).toArray();
-
+  
+      console.log('Files:', files);
+  
       return res.status(200).json(files);
     } catch (error) {
       console.error(error);
